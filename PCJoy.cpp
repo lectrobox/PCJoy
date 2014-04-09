@@ -10,15 +10,20 @@
 #include "Arduino.h"
 #include "PCJoy.h"
 
-PCJoy::PCJoy(uint8_t xChan, uint8_t yChan, uint8_t aChan, uint8_t bChan)
+PCJoy::PCJoy(uint8_t xAnalogPin, uint8_t yAnalogPin, uint8_t aDigitalPin, uint8_t bDigitalPin)
 {
-	_xChan = xChan;
-	_yChan = yChan;
-	_aChan = aChan;
-	_bChan = bChan;
+	_xAnalogPin = xAnalogPin;
+	_yAnalogPin = yAnalogPin;
+	_aDigitalPin = aDigitalPin;
+	_bDigitalPin = bDigitalPin;
 
-	pinMode(_aChan, INPUT_PULLUP);
-	pinMode(_bChan, INPUT_PULLUP);
+	if (_aDigitalPin > 0) {
+		pinMode(_aDigitalPin, INPUT_PULLUP);
+	}
+
+	if (_bDigitalPin > 0) {
+		pinMode(_bDigitalPin, INPUT_PULLUP);
+	}
 
 	_prevState.isLeft = false;
 	_prevState.isRight = false;
@@ -41,28 +46,56 @@ int8_t PCJoy::_adcTo100(uint16_t adc)
 #define ACTUATION_THRESHOLD 50
 #define RELEASE_THRESHOLD 30
 
+#define RAW_ADC_DISCONNECTED_THRESHOLD 10
+
+bool PCJoy::_maybeReadButton(uint8_t digitalPin)
+{
+	if (digitalPin == 0)
+		return false;
+	else
+		return digitalRead(digitalPin) == HIGH ? false : true;
+}
+
+// Read an analog stick axis position from the ADC and convert,
+// IFF the channel is configured.
+// Returns the -100 to +100 scale, and (as a side effect) will
+// clear isConnected if a channel is defined and reads below threshold.
+int8_t PCJoy::_maybeReadPosition(uint8_t analogPin, PCJoy_State *retval)
+{
+	if (analogPin > 0) {
+		uint16_t adcVal = analogRead(analogPin);
+
+		if (adcVal < RAW_ADC_DISCONNECTED_THRESHOLD) {
+			retval->isConnected = false;
+		} else {
+			return _adcTo100(adcVal);
+		}
+	} else {
+		// Analog channel not in use; return default value
+		return 0;
+	}
+}
+
 PCJoy_State PCJoy::getState(void)
 {
 	PCJoy_State retval = _prevState;
 
-	uint16_t xAdc = analogRead(_xChan);
-	uint16_t yAdc = analogRead(_yChan);
+	uint16_t xAdc = 0;
+	uint16_t yAdc = 0;
 
-	retval.isConnected = xAdc >= 10 && yAdc >= 10;
+	// Read from the X and Y channels if they're in use.
+	// If they are in use, also detect whether the joystick is connected.
+	retval.isConnected = true;
+	retval.xPos = _maybeReadPosition(_xAnalogPin, &retval);
+	retval.yPos = _maybeReadPosition(_yAnalogPin, &retval);
 
+	// If one of the analog channels is in use and detected
+	// a disconnected joystick, return.
 	if (!retval.isConnected) {
 		return retval;
 	}
 
-	// Serial.print(xAdc);
-	// Serial.print("\t");
-	// Serial.print(yAdc);
-	// Serial.println("");
-
-	retval.xPos = _adcTo100(xAdc);
-	retval.yPos = _adcTo100(yAdc);
-
-	// Compute the left/right/up/down bits using histeresis.
+	// Compute the left/right/up/down bits using hysteresis.
 	if (retval.xPos < -ACTUATION_THRESHOLD)
 		retval.isLeft = true;
 	if (retval.xPos > -RELEASE_THRESHOLD)
@@ -80,9 +113,10 @@ PCJoy_State PCJoy::getState(void)
 		retval.isDown = true;
 	if (retval.yPos < RELEASE_THRESHOLD)
 		retval.isDown = false;
-		
-	retval.aDown = digitalRead(_aChan) == HIGH ? false : true;
-	retval.bDown = digitalRead(_bChan) == HIGH ? false : true;
+
+	// If buttons are in use, compute their states		
+	retval.aDown = _maybeReadButton(_aDigitalPin);
+	retval.bDown = _maybeReadButton(_bDigitalPin);
 
 	_prevState = retval;
 	return retval;

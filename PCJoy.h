@@ -28,17 +28,19 @@ class PCJoy_State
 class PCJoy
 {
  public:
-	PCJoy(uint8_t xChan, uint8_t yChan, uint8_t aChan, uint8_t bChan);
+	PCJoy(uint8_t xAnalogPin, uint8_t yAnalogPin, uint8_t aDigitalPin, uint8_t bDigitalPin);
 	PCJoy_State getState(void);
 
  private:
-	uint8_t _xChan;
-	uint8_t _yChan;
-	uint8_t _aChan;
-	uint8_t _bChan;
+	uint8_t _xAnalogPin;
+	uint8_t _yAnalogPin;
+	uint8_t _aDigitalPin;
+	uint8_t _bDigitalPin;
 	PCJoy_State _prevState;
 
-	int8_t _adcTo100(uint16_t adc);
+	static int8_t _adcTo100(uint16_t adc);
+	int8_t _maybeReadPosition(uint8_t analogPin, PCJoy_State *retval);
+	static bool _maybeReadButton(uint8_t digitalPin);
 };
 
 	
