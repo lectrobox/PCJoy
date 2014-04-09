@@ -6,14 +6,14 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-PCJoy        KEYWORD1
-PCJoy_State  KEYWORD1
+PCJoy	KEYWORD1
+PCJoy_State	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 
-getState        KEYWORD2
+getState	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
