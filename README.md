@@ -10,7 +10,7 @@ The shield lets you attach any old-style PC joystick with a 15-pin
 game port interface to your Arduino. (USB joysticks are not supported.)
 
 The X and Y movement of the stick are returned in steps from -100
-(fully down or left) to +100 (fully up or right). Your sketch can also
+(fully up or left) to +100 (fully down or right). Your sketch can also
 detect button-pushes for up to two joystick buttons.
 
 The shield has jumpers that allow configuration which of the Arduino's
